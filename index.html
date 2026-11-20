@@ -1264,9 +1264,49 @@
         } catch (e) {}
       }
 
+      // Lokasi: Segment + KP (KP hanya bila ada)
+      const kpKm = getKpKm();
+      const locLine = `Lokasi : Segment ${selectedSegId}${kpKm !== null ? ' – KP ' + fmtKp(kpKm) : ''}`;
+
+      // Jam tiba = jam laporan SPO + estimasi (bila jam laporan tidak ada: jam saat balasan dibuat)
+      const arrival = getArrivalText(parseInt(est, 10) || 0);
+
       const memberLines = members.map((m, idx) => `   ${idx + 1}. ${m}`).join('\n');
-      const replyStr = `Siap Laksanakan @SPO\n\n${ticket}\n\n${teamTitle}\n${memberLines}\n\nEst. ${est} Menit`;
+      const replyStr = `Siap Laksanakan @SPO\n\n${ticket}\n${locLine}\n\n${teamTitle}\n${memberLines}\n\nEst. ${est} Menit (${arrival})`;
       document.getElementById('waReplyPreview').textContent = replyStr;
+    }
+
+    // Ubah tanggal laporan SPO (18 November 2026 / 18 Nov 2026 / 18/11/2026) menjadi Date
+    const MONTHS_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    function parseReportDate(str) {
+      if (!str) return null;
+      const t = str.toLowerCase();
+      let m = t.match(/(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{2,4})/);
+      if (m) {
+        const y = m[3].length === 2 ? 2000 + parseInt(m[3], 10) : parseInt(m[3], 10);
+        return new Date(y, parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+      }
+      const keys = [['jan'], ['feb'], ['mar'], ['apr'], ['mei', 'may'], ['jun'], ['jul'], ['agu', 'agt', 'aug'], ['sep'], ['okt', 'oct'], ['nov'], ['des', 'dec']];
+      m = t.match(/(\d{1,2})\s+([a-z]+)\.?\s+(\d{4})/);
+      if (m) {
+        const mi = keys.findIndex(ks => ks.some(k => m[2].startsWith(k)));
+        if (mi >= 0) return new Date(parseInt(m[3], 10), mi, parseInt(m[1], 10));
+      }
+      return null;
+    }
+    function getArrivalText(estMin) {
+      const pad = n => String(n).padStart(2, '0');
+      let base;
+      const tm = (parsedAlarm.time || '').match(/^(\d{1,2}):(\d{2})$/);
+      if (tm) {
+        const d = parseReportDate(parsedAlarm.date) || getActiveDateTime();
+        base = new Date(d.getFullYear(), d.getMonth(), d.getDate(), parseInt(tm[1], 10), parseInt(tm[2], 10));
+      } else {
+        base = getActiveDateTime();
+      }
+      const arr = new Date(base.getTime() + estMin * 60000);
+      const crossed = arr.getFullYear() !== base.getFullYear() || arr.getMonth() !== base.getMonth() || arr.getDate() !== base.getDate();
+      return `Tiba ±${pad(arr.getHours())}:${pad(arr.getMinutes())} WIB${crossed ? `, ${arr.getDate()} ${MONTHS_ID[arr.getMonth()]}` : ''}`;
     }
 
     async function pasteFromClipboard() {
@@ -1370,6 +1410,7 @@
     }
 
     function copyWaReply(openWa) {
+      updateReplyPreview(); // perbarui jam tiba tepat saat balasan disalin
       const text = document.getElementById('waReplyPreview').textContent;
       copyText(text).then(() => {
         showToast('✅ Balasan @SPO disalin! Siap paste di grup WA.');
