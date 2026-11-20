@@ -457,6 +457,15 @@
       color: var(--muted);
       padding: 14px 10px;
     }
+    /* KP & lokasi alarm */
+    .kp-row { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+    .kp-row label { font-size:11.5px; font-weight:800; color:var(--navy); }
+    .kp-box { margin-top:10px; padding:10px 12px; border-radius:10px; font-size:12.5px; line-height:1.5; border:1px solid #BFDBFE; background:#EFF6FF; color:var(--navy); }
+    .kp-box.warn { background:#FFF7ED; border-color:#FDBA74; color:#9A3412; }
+    .kp-box.err { background:#FEF2F2; border-color:#FCA5A5; color:#991B1B; }
+    .kp-box .kp-main { font-weight:800; font-size:13.5px; }
+    .seg-btn .s-kp { display:block; font-size:10px; opacity:.75; margin-top:2px; }
+    .hp-missing { display:inline-block; background:#FEE2E2; color:#B91C1C; font-weight:800; font-size:10.5px; border-radius:6px; padding:1px 6px; margin-left:4px; }
   </style>
 </head>
 <body>
@@ -515,13 +524,20 @@
         </div>
         <div class="seg-grid" id="segmentGrid"></div>
 
+        <!-- KP Lokasi Alarm -->
+        <div class="kp-row">
+          <label for="kpInput">📏 KP Lokasi Alarm</label>
+          <input type="text" id="kpInput" class="form-ctrl" style="max-width:170px;padding:6px 10px;font-size:12.5px;" placeholder="cth: 4.58 atau 04+580" inputmode="decimal" oninput="onKpInput()" />
+        </div>
+        <div id="kpInfoBox" class="kp-box" style="display:none;"></div>
+
         <!-- Subzone Selector for Segment 3B -->
         <div id="seg3bSubzoneBox" class="subzone-box" style="display:none;">
           <div style="font-size:12px;font-weight:800;color:var(--navy);">📍 Segment 3B Melintasi 3 Wilayah Patroli — Pilih Zona Terdekat:</div>
           <div class="subzone-btns">
-            <button class="sub-btn active" id="sub3b-0" onclick="select3BZone(0)">Zona 1: KBJ – Petapahan (Patrol 2 & WT 4)</button>
-            <button class="sub-btn" id="sub3b-1" onclick="select3BZone(1)">Zona 2: Petapahan – Libo (Patrol 3 & WT 5)</button>
-            <button class="sub-btn" id="sub3b-2" onclick="select3BZone(2)">Zona 3: Libo – DSP (Patrol 4 & WT 6/7)</button>
+            <button class="sub-btn active" id="sub3b-0" onclick="select3BZone(0)">Zona 1: KBJ – Petapahan (Patrol 2 & WT 4) · KP 08+200 – 15+800</button>
+            <button class="sub-btn" id="sub3b-1" onclick="select3BZone(1)">Zona 2: Petapahan – Libo (Patrol 3 & WT 5) · KP 15+800 – 29+300</button>
+            <button class="sub-btn" id="sub3b-2" onclick="select3BZone(2)">Zona 3: Libo – DSP (Patrol 4 & WT 6/7) · KP 31+400 – 56+800</button>
           </div>
         </div>
       </div>
@@ -857,9 +873,123 @@
       { patrols: [4], wts: [6, 7] }
     ];
 
-    // STATE (menggunakan key storage baru v4 agar data kontrak terbaru langsung dimuat)
-    let patrolsData = JSON.parse(localStorage.getItem('lds_patrols_v4')) || JSON.parse(JSON.stringify(DEFAULT_PATROLS));
-    let logsData = JSON.parse(localStorage.getItem('lds_logs_v4')) || [];
+    // 5. DATA KP PER SEGMENT (KP start–stop dari tabel alokasi Tim WT, patokan dari peta pembagian tim)
+    //    KP kembali ke 00+000 di awal tiap segment, kecuali Seg 3B yang bersambung KP 08+200 – 56+800.
+    //    null = belum ada data KP resmi.
+    const SEG_KP = {
+      "1":   { start: 0,   end: 2.1,   marks: [[0, "Ujung Seg 1"], [2.1, "Minas Tank Farm"]] },
+      "2":   { start: 0,   end: 16.1,  marks: [[0, "Minas Tank Farm"], [16.1, "NBS"]] },
+      "3A":  { start: 0,   end: 8.2,   marks: [[0, "NBS"], [8.0, "Kota Batak Junction"], [8.2, "Booster KBJ"]] },
+      "3B":  { start: 8.2, end: 56.8,  marks: [[8.2, "Booster KBJ"], [15.8, "SBV1 / Mindal Junction"], [29.3, "SBV2A"], [31.4, "SBV2B"], [56.8, "Duri Station (DSP)"]] },
+      "4":   { start: 0,   end: 33.6,  marks: [[0, "Kota Batak"], [21.0, "Booster Pump Kota Batak"], [33.6, "Booster KBJ"]] },
+      "5":   { start: 0,   end: 12.8,  marks: [[0, "Libo"], [12.8, "Mindal Junction"]] },
+      "6":   null,
+      "7":   { start: 0,   end: 47.63, marks: [[0, "Bangko (awal Seg 7)"], [3.0, "Tie In Benar"], [13.6, "BP Menggala"], [45.0, "BP Batang PSO"], [47.63, "Batang"]] },
+      "8":   { start: 0,   end: 12.74, marks: [[0, "Balam"], [12.74, "Bangko"]] },
+      "9":   { start: 0,   end: 10.75, marks: [[0, "Benar"], [10.75, "Pertemuan Seg 9"]] },
+      "10":  { start: 0,   end: 37.7,  marks: [[0, "BP Batang HO"], [37.7, "SLC Meter"]] },
+      "11A": { start: 0,   end: 9.7,   marks: [[0, "Duri Shipping Pump"], [9.7, "Batas 11A/11B"]] },
+      "11B": null,
+      "12":  { start: 0,   end: 37.7,  marks: [[0, "BP Batang HO"], [37.7, "DC Meter"]] }
+    };
+    const SEG3B_GAP = [29.3, 31.4];
+
+    // Ubah teks KP (4.58 / 4,58 / 04+580) menjadi angka km
+    function parseKp(str) {
+      if (str === null || str === undefined) return null;
+      const t = String(str).trim().replace(/\s+/g, '');
+      if (!t) return null;
+      let m = t.match(/^(\d{1,3})\+(\d{1,3})$/);
+      if (m) return parseInt(m[1], 10) + parseInt(m[2].padStart(3, '0'), 10) / 1000;
+      m = t.match(/^(\d{1,3})(?:[.,](\d{1,3}))?$/);
+      if (m) return parseInt(m[1], 10) + (m[2] ? parseFloat('0.' + m[2]) : 0);
+      return null;
+    }
+    function fmtKp(km) {
+      const meters = Math.round(km * 1000);
+      return String(Math.floor(meters / 1000)).padStart(2, '0') + '+' + String(meters % 1000).padStart(3, '0');
+    }
+    function fmtKm(v) { return (Math.round(v * 10) / 10).toLocaleString('id-ID'); }
+
+    // Tentukan posisi KP pada segment: status, patokan terdekat, dan zona 3B
+    function locateKp(segId, km) {
+      const seg = SEGMENTS.find(s => s.id === segId);
+      const data = SEG_KP[segId];
+      const kpTxt = 'KP ' + fmtKp(km);
+      if (!data) {
+        return { level: 'warn', zoneIdx: null, short: kpTxt,
+          html: `<div class="kp-main">⚠️ ${kpTxt} · ${seg.code}</div>Belum ada data KP resmi untuk ${seg.code}, jadi lokasi KP tidak dapat diverifikasi. Seg 11B/6 juga belum memiliki tim walkthrough khusus.` };
+      }
+      const eps = 0.0005;
+      if (km < data.start - eps || km > data.end + eps) {
+        return { level: 'err', zoneIdx: null, short: kpTxt,
+          html: `<div class="kp-main">⛔ ${kpTxt} di luar rentang ${seg.code}</div>${seg.code} hanya KP ${fmtKp(data.start)} – ${fmtKp(data.end)}. Cek kembali segment / KP pada pesan SPO.` };
+      }
+      let zoneIdx = null;
+      if (segId === '3B') {
+        if (km > SEG3B_GAP[0] + eps && km < SEG3B_GAP[1] - eps) {
+          return { level: 'warn', zoneIdx: null, short: `${kpTxt} (celah SBV2A – SBV2B)`,
+            html: `<div class="kp-main">⚠️ ${kpTxt} · Seg 3B celah SBV2A – SBV2B</div>KP 29+300 – 31+400 tidak masuk wilayah tim mana pun. Pilih zona terdekat secara manual.` };
+        }
+        zoneIdx = km <= 15.8 + eps ? 0 : (km <= SEG3B_GAP[0] + eps ? 1 : 2);
+      }
+      const marks = data.marks;
+      let where = '';
+      const near = marks.find(mk => Math.abs(mk[0] - km) <= 0.05);
+      if (near) {
+        where = `di ${near[1]} (KP ${fmtKp(near[0])})`;
+      } else {
+        let prev = marks[0], next = marks[marks.length - 1];
+        for (let i = 0; i < marks.length - 1; i++) {
+          if (km >= marks[i][0] && km <= marks[i + 1][0]) { prev = marks[i]; next = marks[i + 1]; break; }
+        }
+        where = `antara ${prev[1]} (KP ${fmtKp(prev[0])}) dan ${next[1]} (KP ${fmtKp(next[0])}), ±${fmtKm(km - prev[0])} km dari ${prev[1]}`;
+      }
+      const zoneTxt = zoneIdx !== null ? `<br/>Zona 3B dipilih otomatis: <b>Zona ${zoneIdx + 1}</b>.` : '';
+      return { level: 'ok', zoneIdx, short: `${kpTxt} (${where.replace(/ \(KP [^)]*\)/g, '')})`,
+        html: `<div class="kp-main">📍 ${kpTxt} · ${seg.code} (${seg.name})</div>Lokasi ${where}. Rentang ${seg.code}: KP ${fmtKp(data.start)} – ${fmtKp(data.end)}.${zoneTxt}` };
+    }
+
+    // PENYIMPANAN AMAN & VERSI DATA
+    // Naikkan DATA_VERSION setiap kali DEFAULT_PATROLS diperbarui, agar data lama di HP tidak menimpa data terbaru.
+    const DATA_VERSION = 5;
+    function safeParse(key, fallback) {
+      try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+    }
+    function safeSet(key, val) {
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+    }
+    function esc(v) {
+      return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function isValidPatrols(d) {
+      return !!d && typeof d === 'object' && Object.keys(DEFAULT_PATROLS).every(id =>
+        d[id] && typeof d[id].name === 'string' && Array.isArray(d[id].teams) && d[id].teams.length === 4 &&
+        d[id].teams.every(t => t && typeof t.pleton === 'string' && Array.isArray(t.members) && t.members.length === 2));
+    }
+    let dataUpgraded = false;
+    function loadPatrols() {
+      const stored = safeParse('lds_patrols_v5', null);
+      if (stored && stored.version === DATA_VERSION && isValidPatrols(stored.data)) return stored.data;
+      const fresh = JSON.parse(JSON.stringify(DEFAULT_PATROLS));
+      const old = (stored && isValidPatrols(stored.data)) ? stored.data : safeParse('lds_patrols_v4', null);
+      if (isValidPatrols(old)) {
+        // Data resmi terbaru dipakai; nomor HP tim yang pernah diisi pengguna tetap dipertahankan bila data resmi masih kosong
+        Object.keys(fresh).forEach(id => {
+          if (!fresh[id].teamPhone && old[id] && old[id].teamPhone) fresh[id].teamPhone = String(old[id].teamPhone);
+        });
+        dataUpgraded = true;
+      }
+      safeSet('lds_patrols_v5', { version: DATA_VERSION, data: fresh });
+      return fresh;
+    }
+    function savePatrols() { safeSet('lds_patrols_v5', { version: DATA_VERSION, data: patrolsData }); }
+
+    // STATE
+    let patrolsData = loadPatrols();
+    let logsData = safeParse('lds_logs_v4', []);
+    if (!Array.isArray(logsData)) logsData = [];
+    let parsedAlarm = { date: '', time: '', subject: '', status: '' };
     let selectedSegId = "5";
     let selected3BIdx = 0;
     let simulatedDateTime = null;
@@ -960,7 +1090,9 @@
         .forEach(seg => {
           const btn = document.createElement('button');
           btn.className = 'seg-btn' + (seg.id === selectedSegId ? ' active' : '');
-          btn.innerHTML = `<span class="s-code">${seg.code}</span><span class="s-name">${seg.name}</span>`;
+          const kpd = SEG_KP[seg.id];
+          const kpRange = kpd ? `KP ${fmtKp(kpd.start)} – ${fmtKp(kpd.end)}` : 'KP belum tersedia';
+          btn.innerHTML = `<span class="s-code">${seg.code}</span><span class="s-name">${seg.name}</span><span class="s-kp">${kpRange}</span>`;
           btn.onclick = () => selectSegment(seg.id);
           grid.appendChild(btn);
         });
@@ -972,14 +1104,39 @@
       const seg = SEGMENTS.find(s => s.id === segId);
       document.getElementById('seg3bSubzoneBox').style.display = seg.is3B ? 'block' : 'none';
       renderSegments();
-      renderDispatchUnits();
+      applyKp();
     }
 
-    function select3BZone(idx) {
+    function select3BZone(idx, skipRender) {
       selected3BIdx = idx;
       [0, 1, 2].forEach(i => document.getElementById(`sub3b-${i}`).classList.toggle('active', i === idx));
+      if (!skipRender) renderDispatchUnits();
+    }
+
+    // KP: baca input, tampilkan lokasi, pilih zona 3B otomatis, lalu render tim
+    let currentKp = null;
+    function getKpKm() { return parseKp(document.getElementById('kpInput').value); }
+    function applyKp() {
+      const box = document.getElementById('kpInfoBox');
+      const raw = document.getElementById('kpInput').value.trim();
+      const km = getKpKm();
+      currentKp = null;
+      if (!raw) {
+        box.style.display = 'none';
+      } else if (km === null) {
+        box.className = 'kp-box err';
+        box.innerHTML = `<div class="kp-main">⛔ Format KP tidak dikenali</div>Gunakan format 4.58, 4,58, atau 04+580.`;
+        box.style.display = 'block';
+      } else {
+        currentKp = locateKp(selectedSegId, km);
+        if (currentKp.zoneIdx !== null) select3BZone(currentKp.zoneIdx, true);
+        box.className = 'kp-box' + (currentKp.level === 'ok' ? '' : ' ' + currentKp.level);
+        box.innerHTML = currentKp.html;
+        box.style.display = 'block';
+      }
       renderDispatchUnits();
     }
+    function onKpInput() { applyKp(); }
 
     function formatWaLink(phone, text) {
       if (!phone) return null;
@@ -1003,7 +1160,12 @@
       replySelect.innerHTML = '';
 
       const ticket = document.getElementById('ticketInput').value || 'TIKET LDS';
-      const alertText = `*ALARM LDS - GROUND CHECK*\n${ticket}\nLokasi: ${seg.code} (${seg.name})\nWaktu: ${ctx.dateStr} ${ctx.timeStr} WIB\nMohon segera dilakukan penyisiran radius ±500m dan laporkan estimasi waktu tiba (ETA).`;
+      const kpLine = currentKp ? `\n${currentKp.short}` : '';
+      const subjLine = parsedAlarm.subject ? `\nAlarm: ${parsedAlarm.subject}` : '';
+      const repTime = (parsedAlarm.date || parsedAlarm.time)
+        ? `${parsedAlarm.date || ctx.dateStr} ${parsedAlarm.time ? parsedAlarm.time + ' WIB' : ''}`.trim()
+        : `${ctx.dateStr} ${ctx.timeStr} WIB`;
+      const alertText = `*ALARM LDS - GROUND CHECK*\n${ticket}${subjLine}\nLokasi: ${seg.code} (${seg.name})${kpLine}\nLaporan SPO: ${repTime}\nMohon segera dilakukan penyisiran radius ±500m dan laporkan estimasi waktu tiba (ETA).`;
 
       // 1. Render Walkthrough Teams (08:00 - 16:00 WIB)
       activeWtIds.forEach(wtId => {
@@ -1042,22 +1204,22 @@
         const cleanPatrolTitle = patrol.name.split(' (')[0]; // e.g., "Patrol 3"
         const opt = document.createElement('option');
         opt.value = JSON.stringify({ title: cleanPatrolTitle, members: activeTeam.members });
-        opt.textContent = `${patrol.name} (${activeTeam.pleton} - Shift ${ctx.shiftCode}) — ${activeTeam.members.join(' & ')}`;
+        opt.textContent = `${patrol.name} (${activeTeam.pleton} - Shift ${ctx.shiftCode}) — ${activeTeam.members.join(' & ')}${patrol.teamPhone ? '' : ' [HP belum tersedia]'}`;
         if (!ctx.isWtActive) replySelect.prepend(opt);
         else replySelect.appendChild(opt);
 
         const card = document.createElement('div');
         card.className = 'unit-card' + (!ctx.isWtActive ? ' selected-unit' : '');
         card.innerHTML = `
-          <span class="unit-badge badge-patrol">🚓 Patroli 24 Jam • ${activeTeam.pleton} (Shift ${ctx.shiftCode}) • Risiko ${patrol.risk || 'Medium'}</span>
-          <div style="font-weight:800;font-size:14px;color:var(--navy);">${patrol.name}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">${patrol.area}</div>
+          <span class="unit-badge badge-patrol">🚓 Patroli 24 Jam • ${esc(activeTeam.pleton)} (Shift ${ctx.shiftCode}) • Risiko ${esc(patrol.risk || 'Medium')}</span>
+          <div style="font-weight:800;font-size:14px;color:var(--navy);">${esc(patrol.name)}${patrol.teamPhone ? '' : '<span class="hp-missing">⚠️ HP belum tersedia</span>'}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">${esc(patrol.area)}</div>
           
           <!-- Kontak HP Dinas Tim Patroli -->
           <div class="person-item" style="background:#EFF6FF;border-color:#93C5FD;margin-bottom:8px;">
             <div class="person-info">
-              <strong>📱 HP Dinas ${cleanPatrolTitle}</strong>
-              <span>${patrol.teamPhone ? patrol.teamPhone : 'Nomor HP Tim belum tersedia'}</span>
+              <strong>📱 HP Dinas ${esc(cleanPatrolTitle)}</strong>
+              <span>${patrol.teamPhone ? esc(patrol.teamPhone) : 'Nomor HP Tim belum tersedia'}</span>
             </div>
             ${patrol.teamPhone
               ? `<a class="wa-direct" href="${formatWaLink(patrol.teamPhone, alertText)}" target="_blank">📲 WA Tim</a>`
@@ -1065,10 +1227,10 @@
           </div>
 
           <!-- Daftar 2 Personel Pleton Aktif -->
-          <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:4px;">👤 Personel On-Duty (${activeTeam.pleton}):</div>
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:4px;">👤 Personel On-Duty (${esc(activeTeam.pleton)}):</div>
           <div class="person-item" style="margin-top:0;">
             <div class="person-info">
-              <strong>1. ${activeTeam.members[0]} &nbsp;|&nbsp; 2. ${activeTeam.members[1]}</strong>
+              <strong>1. ${esc(activeTeam.members[0])} &nbsp;|&nbsp; 2. ${esc(activeTeam.members[1])}</strong>
               <span>Mobil DC + Motor Trail • ${ctx.shiftLabel}</span>
             </div>
           </div>
@@ -1129,6 +1291,9 @@
     function clearSpo() {
       document.getElementById('spoRawText').value = '';
       document.getElementById('parsedMeta').textContent = '';
+      document.getElementById('kpInput').value = '';
+      parsedAlarm = { date: '', time: '', subject: '', status: '' };
+      applyKp();
     }
 
     function parseSpoMessage() {
@@ -1137,37 +1302,76 @@
         showToast('Masukkan teks pesan SPO terlebih dahulu.');
         return;
       }
+      const pick = (re) => { const m = raw.match(re); return m ? m[1].trim() : ''; };
 
+      // Tiket
       const ticketMatch = raw.match(/TIKET\s+[A-Z0-9\-\/]+/i);
-      if (ticketMatch) {
-        document.getElementById('ticketInput').value = ticketMatch[0].toUpperCase();
-      }
+      if (ticketMatch) document.getElementById('ticketInput').value = ticketMatch[0].toUpperCase();
 
-      const segMatch = raw.match(/Segment\s*([0-9]{1,2}[AB]?)/i);
-      const kpMatch = raw.match(/KP\s*([0-9\+\.]+)/i);
+      // Tanggal, jam laporan, subject, status
+      parsedAlarm = {
+        date: pick(/(?:Date|Tanggal|Tgl)\s*:\s*([^\n]+)/i),
+        time: pick(/(?:Report\s*Time|Jam|Waktu|Time)\s*:\s*([0-9]{1,2}[:.][0-9]{2})/i).replace('.', ':'),
+        subject: pick(/Subject\s*:\s*([^\n]+)/i),
+        status: pick(/Status[^:\n]*:\s*([^\n]+)/i)
+      };
 
-      if (segMatch) {
-        const foundId = segMatch[1].toUpperCase();
-        const exists = SEGMENTS.find(s => s.id === foundId);
-        if (exists) {
-          selectSegment(foundId);
-          setEst(exists.defaultEst, null);
+      // Segment: Segment 8 / Seg 8 / Segmen 8 / Segment 10/12 / Seg 11B/6 (ambil segment pertama)
+      const segMatch = raw.match(/\bSeg(?:ment|men)?\b\.?\s*[:\-]?\s*(\d{1,2})\s*([AB])?(?:\s*\/\s*\d{1,2}[AB]?)?/i);
+      const segId = segMatch ? (segMatch[1] + (segMatch[2] || '')).toUpperCase() : '';
+      const segFound = segId ? SEGMENTS.find(s => s.id === segId) : null;
+
+      // KP: KP 4.58 / KP 4,58 / KP 04+580 / KP: 4.58
+      const kpMatch = raw.match(/\bKP\b\.?\s*[:\-]?\s*(\d{1,3}(?:\s*[+.,]\s*\d{1,3})?)/i);
+      const kpKm = kpMatch ? parseKp(kpMatch[1]) : null;
+      document.getElementById('kpInput').value = kpKm !== null ? fmtKp(kpKm) : '';
+
+      if (segFound) {
+        selectSegment(segId);
+        setEst(segFound.defaultEst, null);
+      } else {
+        applyKp();
+        const box = document.getElementById('kpInfoBox');
+        const cur = SEGMENTS.find(s => s.id === selectedSegId);
+        if (kpKm !== null) {
+          box.className = 'kp-box warn';
+          box.innerHTML = `<div class="kp-main">⚠️ Segment tidak terdeteksi di pesan SPO</div>KP di bawah ini dinilai terhadap ${cur.code} yang sedang dipilih. Pastikan Segment sudah benar.<hr style="border:none;border-top:1px solid #FDBA74;margin:6px 0;">` + box.innerHTML;
         }
       }
 
       const metaParts = [];
       if (ticketMatch) metaParts.push(`🎫 ${ticketMatch[0].toUpperCase()}`);
-      if (segMatch) metaParts.push(`📍 Segment ${segMatch[1].toUpperCase()}`);
-      if (kpMatch) metaParts.push(`📏 KP ${kpMatch[1]}`);
+      if (segFound) metaParts.push(`📍 ${segFound.code}`);
+      else if (segId) metaParts.push(`⚠️ Segment ${segId} tidak dikenali`);
+      if (kpKm !== null) metaParts.push(`📏 KP ${fmtKp(kpKm)}${kpMatch[1].replace(/\s/g, '') !== fmtKp(kpKm) ? ` (dari "${kpMatch[1].trim()}")` : ''}`);
+      if (parsedAlarm.date || parsedAlarm.time) metaParts.push(`🕒 ${[parsedAlarm.date, parsedAlarm.time && parsedAlarm.time + ' WIB'].filter(Boolean).join(' ')}`);
+      if (parsedAlarm.subject) metaParts.push(`🔔 ${parsedAlarm.subject}`);
       document.getElementById('parsedMeta').textContent = metaParts.length
         ? `Terdeteksi Otomatis: ${metaParts.join(' • ')}`
         : 'Pesan diproses. Silakan pastikan pilihan Segment sudah sesuai.';
-      showToast('Pesan SPO berhasil diproses!');
+      if (!segFound) showToast('Segment tidak terdeteksi, pilih Segment secara manual.');
+      else if (currentKp && currentKp.level !== 'ok') showToast('Pesan diproses — cek peringatan KP.');
+      else showToast('Pesan SPO berhasil diproses!');
+    }
+
+    // Salin teks dengan cadangan untuk HP yang tidak mendukung clipboard API
+    function copyText(text) {
+      const fallback = () => new Promise((resolve, reject) => {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+          const ok = document.execCommand('copy'); document.body.removeChild(ta);
+          ok ? resolve() : reject();
+        } catch (e) { reject(e); }
+      });
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).catch(fallback);
+      return fallback();
     }
 
     function copyWaReply(openWa) {
       const text = document.getElementById('waReplyPreview').textContent;
-      navigator.clipboard.writeText(text).then(() => {
+      copyText(text).then(() => {
         showToast('✅ Balasan @SPO disalin! Siap paste di grup WA.');
       }).catch(() => {
         showToast('Salin teks balasan di kotak hitam di atas.');
@@ -1178,11 +1382,15 @@
       logsData.unshift({
         timestamp: `${ctx.dateStr} ${ctx.timeStr}`,
         ticket: document.getElementById('ticketInput').value,
+        reportTime: [parsedAlarm.date, parsedAlarm.time].filter(Boolean).join(' '),
+        subject: parsedAlarm.subject,
         segment: `${seg.code} (${seg.name})`,
+        kp: currentKp ? 'KP ' + fmtKp(getKpKm()) : '',
+        location: currentKp ? currentKp.short : '',
         team: document.getElementById('replyTeamSelect').selectedOptions[0]?.textContent || '-',
         est: `${document.getElementById('estMinutesInput').value} Menit`
       });
-      localStorage.setItem('lds_logs_v4', JSON.stringify(logsData));
+      safeSet('lds_logs_v4', logsData);
 
       if (openWa) {
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
@@ -1198,22 +1406,22 @@
         const box = document.createElement('div');
         box.style.cssText = 'border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;background:#F8FAFC;';
         box.innerHTML = `
-          <div style="font-weight:800;font-size:13.5px;color:var(--navy);margin-bottom:2px;">${p.name}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">${p.area}</div>
+          <div style="font-weight:800;font-size:13.5px;color:var(--navy);margin-bottom:2px;">${esc(p.name)}${p.teamPhone ? '' : '<span class="hp-missing">⚠️ HP belum tersedia</span>'}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">${esc(p.area)}</div>
           
           <div style="margin-bottom:8px;padding:8px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE;">
-            <label style="font-size:11px;font-weight:800;color:var(--ptg-blue);display:block;margin-bottom:4px;">📱 Nomor HP Dinas ${p.name}:</label>
-            <input type="tel" class="form-ctrl" style="padding:6px 9px;font-size:12.5px;font-weight:700;" value="${p.teamPhone || ''}"
+            <label style="font-size:11px;font-weight:800;color:var(--ptg-blue);display:block;margin-bottom:4px;">📱 Nomor HP Dinas ${esc(p.name)}:</label>
+            <input type="tel" class="form-ctrl" style="padding:6px 9px;font-size:12.5px;font-weight:700;" value="${esc(p.teamPhone || '')}"
               onchange="updateTeamPhone(${pId}, this.value)" placeholder="Masukkan Nomor HP Tim (08...)" />
           </div>
 
           ${p.teams.map((t, tIdx) => `
             <div style="margin-bottom:5px;padding:6px 8px;background:#fff;border-radius:8px;border:1px solid #E2E8F0;">
-              <div style="font-size:11px;font-weight:800;color:var(--navy);margin-bottom:4px;">${t.pleton}</div>
+              <div style="font-size:11px;font-weight:800;color:var(--navy);margin-bottom:4px;">${esc(t.pleton)}</div>
               <div class="grid-2">
-                <input type="text" class="form-ctrl" style="padding:5px 8px;font-size:12px;" value="${t.members[0]}"
+                <input type="text" class="form-ctrl" style="padding:5px 8px;font-size:12px;" value="${esc(t.members[0])}"
                   onchange="updateMemberName(${pId},${tIdx},0,this.value)" placeholder="Personel 1" />
-                <input type="text" class="form-ctrl" style="padding:5px 8px;font-size:12px;" value="${t.members[1]}"
+                <input type="text" class="form-ctrl" style="padding:5px 8px;font-size:12px;" value="${esc(t.members[1])}"
                   onchange="updateMemberName(${pId},${tIdx},1,this.value)" placeholder="Personel 2" />
               </div>
             </div>
@@ -1234,14 +1442,15 @@
 
     function updateTeamPhone(pId, val) {
       patrolsData[pId].teamPhone = val.trim();
-      localStorage.setItem('lds_patrols_v4', JSON.stringify(patrolsData));
+      savePatrols();
+      renderRosterEditors();
       renderDispatchUnits();
       showToast('Nomor HP Tim Patroli tersimpan!');
     }
 
     function updateMemberName(pId, tIdx, mIdx, val) {
       patrolsData[pId].teams[tIdx].members[mIdx] = val.trim();
-      localStorage.setItem('lds_patrols_v4', JSON.stringify(patrolsData));
+      savePatrols();
       renderDispatchUnits();
       showToast('Nama personel tersimpan!');
     }
@@ -1260,14 +1469,18 @@
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
-          patrolsData = JSON.parse(ev.target.result);
-          localStorage.setItem('lds_patrols_v4', JSON.stringify(patrolsData));
+          let data = JSON.parse(ev.target.result);
+          if (data && data.data && data.version) data = data.data;
+          if (!isValidPatrols(data)) throw new Error('struktur tidak sesuai');
+          patrolsData = data;
+          savePatrols();
           renderRosterEditors();
           renderDispatchUnits();
           showToast('✅ Data kontak berhasil di-import!');
         } catch (err) {
-          showToast('Format file JSON tidak valid.');
+          showToast('File JSON tidak valid atau bukan data kontak patrol. Data lama tetap dipakai.');
         }
+        e.target.value = '';
       };
       reader.readAsText(file);
     }
@@ -1281,20 +1494,21 @@
       box.innerHTML = logsData.map(l => `
         <div style="padding:9px;border:1px solid var(--border);border-radius:9px;margin-bottom:7px;background:#F8FAFC;">
           <div style="display:flex;justify-content:space-between;font-weight:800;color:var(--navy);">
-            <span>${l.ticket} — ${l.segment}</span>
-            <span>${l.est}</span>
+            <span>${esc(l.ticket)} — ${esc(l.segment)}${l.kp ? ' • ' + esc(l.kp) : ''}</span>
+            <span>${esc(l.est)}</span>
           </div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${l.timestamp} WIB • ${l.team}</div>
+          ${l.location || l.subject || l.reportTime ? `<div style="font-size:11.5px;color:var(--navy);margin-top:2px;">${[l.subject && '🔔 ' + esc(l.subject), l.reportTime && '🕒 Laporan SPO ' + esc(l.reportTime), l.location && '📍 ' + esc(l.location)].filter(Boolean).join(' • ')}</div>` : ''}
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Respon ${esc(l.timestamp)} WIB • ${esc(l.team)}</div>
         </div>
       `).join('');
     }
 
     function exportLogsCsv() {
       if (!logsData.length) return showToast('Log masih kosong.');
-      const rows = [['Waktu', 'Tiket', 'Segment', 'Tim Respon', 'Estimasi']];
-      logsData.forEach(l => rows.push([l.timestamp, l.ticket, l.segment, l.team, l.est]));
-      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const rows = [['Waktu Respon', 'Tiket', 'Laporan SPO', 'Subject', 'Segment', 'KP', 'Lokasi', 'Tim Respon', 'Estimasi']];
+      logsData.forEach(l => rows.push([l.timestamp, l.ticket, l.reportTime || '', l.subject || '', l.segment, l.kp || '', l.location || '', l.team, l.est]));
+      const csv = rows.map(r => r.map(c => `"${String(c === null || c === undefined ? '' : c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'log_respon_lds_ora.csv';
@@ -1303,14 +1517,15 @@
 
     function clearLogs() {
       logsData = [];
-      localStorage.removeItem('lds_logs_v4');
+      try { localStorage.removeItem('lds_logs_v4'); } catch (e) {}
       renderLogs();
       showToast('Log kejadian dibersihkan.');
     }
 
     function openSimModal() {
       const now = getActiveDateTime();
-      document.getElementById('simDate').value = now.toISOString().slice(0, 10);
+      const pad = n => String(n).padStart(2, '0');
+      document.getElementById('simDate').value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
       document.getElementById('simTime').value = now.toTimeString().slice(0, 5);
       document.getElementById('simModal').classList.add('open');
     }
@@ -1336,6 +1551,7 @@
     renderSegments();
     renderDispatchUnits();
     setInterval(updateHeaderBadge, 30000);
+    if (dataUpgraded) showToast('Data kontak diperbarui ke versi terbaru. Nomor HP yang pernah diisi tetap disimpan.');
   </script>
 </body>
 </html>

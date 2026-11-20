@@ -1,4 +1,5 @@
-const CACHE_NAME = 'lds-dispatch-ora-v4';
+// Naikkan versi cache setiap kali aplikasi diperbarui
+const CACHE_NAME = 'lds-dispatch-ora-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -25,15 +26,34 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        if (event.request.method === 'GET' && response.status === 200) {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+
+  // Halaman aplikasi: ambil versi terbaru dari internet dulu, cache hanya untuk mode offline
+  const isPage = req.mode === 'navigate' || req.destination === 'document';
+  if (isPage) {
+    event.respondWith(
+      fetch(req).then((response) => {
+        if (response.status === 200) {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
         }
         return response;
-      }).catch(() => caches.match('./index.html'));
+      }).catch(() => caches.match(req).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Ikon, manifest, dll: pakai cache dulu
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      return cached || fetch(req).then((response) => {
+        if (response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        }
+        return response;
+      });
     })
   );
 });
