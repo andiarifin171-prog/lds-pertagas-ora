@@ -849,6 +849,67 @@
       }
     };
 
+    // 3b. JADWAL HARIAN TIM WALKTHROUGH (dari file SCHEDULE_WT per bulan)
+    //     Format per personel: [nama, nomor HP, kode tgl 1..akhir bulan]  T# = bertugas di Tim #, C = cadangan, L = libur
+    //     Tambahkan bulan baru dengan key "YYYY-MM". Bila bulan belum ada, aplikasi memakai anggota tetap WT_TEAMS.
+    const WT_SCHEDULES = {
+      "2026-11": {
+        source: "Schedule WT November 2026",
+        people: [
+          ["Refqy Abdi Fadillah", "082283343642", "T1,L,L,T1,T1,T1,T1,C,L,L,T1,T1,T1,T1,T1,L,L,T1,T1,T1,T1,T1,L,L,T1,T1,T1,T1,C,L"],
+          ["Edi Hartono", "085265240467", "C,T1,T1,L,L,T1,T1,T1,T1,T1,L,L,T1,T1,T1,T1,T1,L,L,T1,T1,C,T1,T1,L,L,T1,T1,T1,T1"],
+          ["Muhammad Jefrian", "082170065958", "T1,T1,T1,T1,T1,L,L,T2,T1,T1,T1,T1,L,L,C,T1,T1,T1,T1,L,L,T1,T1,T1,T1,T1,L,L,T2,T1"],
+          ["Nurdianto", "081994515648", "T4,T4,L,L,T3,T3,T3,T3,T3,L,L,T3,T3,T3,T3,T4,L,L,T4,T4,T4,T4,T4,L,L,T3,T3,T3,T3,T3"],
+          ["Firmansyah", "085373638556", "T3,T3,T3,L,L,T3,T3,T3,T3,T3,L,L,T2,T2,T2,T4,T4,L,L,T3,T3,T3,T3,T3,L,L,T3,T3,T3,T3"],
+          ["Putra Jagaraga", "085264593010", "T3,T3,T3,T3,L,L,T2,T2,T2,T2,T2,L,L,T2,T2,T3,T3,T3,L,L,T3,T3,T3,T3,T3,L,L,T2,T2,T2"],
+          ["Romadoni", "082385959005", "T2,T2,T2,T2,T2,L,L,T2,T2,T2,T2,T2,L,L,T3,T3,T3,T3,T3,L,L,T2,T2,T2,T2,T2,L,L,T2,T2"],
+          ["Aldi Ariska", "083821641380", "L,T2,T2,T2,T2,T2,L,L,T4,T4,T4,T4,T4,L,L,T2,T2,T2,T2,T2,L,L,T2,T2,T2,T2,T2,L,L,T4"],
+          ["Azri Yunanda", "085835042359", "L,L,T4,T4,T4,T4,T4,L,L,T4,T4,T4,T4,T4,L,L,T2,T2,T2,T2,T2,L,L,T4,T4,T4,T4,T4,L,L"],
+          ["Leri Dodi A. Silaban", "087733310642", "T2,L,L,T4,T4,T4,T4,T2,L,L,T3,T3,T3,T3,T3,L,L,T4,T4,T4,T4,T2,L,L,T4,T4,T4,T4,T2,L"],
+          ["Muslim", "082379610259", "T5,T5,T5,T5,L,L,T5,T5,T5,T5,C,L,L,T5,T5,T5,T5,T5,L,L,T5,T5,T5,T5,T5,L,L,T5,T5,T5"],
+          ["Sigit Saputra", "081268068001", "L,T5,T5,C,T5,T5,L,L,T5,T5,T5,T5,T5,L,L,T5,T5,T5,T5,T5,L,L,T5,T5,C,T5,T5,L,L,T5"],
+          ["Sofyan Ali Lubis", "085299470947", "T5,L,L,T5,T5,T5,T5,T5,L,L,T5,T5,T5,T5,T5,L,L,C,T5,T5,T5,T5,L,L,T5,T5,T5,T5,T5,L"],
+          ["Angga Lesmana", "082284579100", "T6,T6,L,L,T7,T7,T7,T7,T7,L,L,T6,T6,T6,T6,T7,L,L,T6,T6,T6,T6,T6,L,L,T7,T7,T7,T7,T7"],
+          ["Gunawan Nainggolan", "085248324643", "T7,T7,T7,T7,L,L,T6,T6,T6,T6,T6,L,L,T7,T7,T6,T6,T6,L,L,T7,T7,T7,T7,T7,L,L,T6,T6,T6"],
+          ["Satrio Anjasmara", "085835470686", "L,T6,T6,T6,T6,T6,L,L,T6,T6,T6,T6,T6,L,L,T6,T6,T6,T6,T6,L,L,T6,T6,T6,T6,T6,L,L,T6"],
+          ["Muhammad Ihsan Satrio", "083166612340", "T7,L,L,T6,T6,T6,T6,T6,L,L,T7,T7,T7,T7,T7,L,L,T7,T7,T7,T7,T7,L,L,T6,T6,T6,T6,T6,L"],
+          ["Akbar Yunus", "088271208293", "T7,T7,T7,T7,T7,L,L,T7,T7,T7,T7,T7,L,L,T7,T7,T7,T7,T7,L,L,T7,T7,T7,T7,T7,L,L,T7,T7"],
+          ["Hendra Yani", "087767007587", "T8,T8,T8,L,L,T8,T8,T8,T8,T8,L,L,T8,T8,T8,T8,C,L,L,T8,T8,T8,T8,T8,L,L,T8,T8,T8,T8"],
+          ["Juhar", "089503589908", "T8,T8,T8,T8,T8,L,L,T8,T8,C,T8,T8,L,L,T8,T8,T8,T8,T8,L,L,T8,T8,T8,T8,T8,L,L,T8,T8"],
+          ["Maulana Malik", "082385610702", "L,L,C,T8,T8,T8,T8,L,L,T8,T8,T8,T8,T8,L,L,T8,T8,T8,T8,T8,L,L,C,T8,T8,T8,T8,L,L"],
+          ["Muhammad Riski", "082256184798", "L,T9,T9,T9,T9,T9,L,L,T10,T10,T10,T10,T10,L,L,T10,T10,T10,T10,T10,L,L,T9,T9,T9,T9,T9,L,L,T10"],
+          ["Ahmad Safi'i", "082285449247", "T9,L,L,T10,T10,T10,T10,T10,L,L,T9,T9,T9,T9,T9,L,L,T9,T9,T9,T9,T9,L,L,T10,T10,T10,T10,T10,L"],
+          ["Novendra", "082372090101", "T10,T10,T10,L,L,T9,T9,T9,T9,T9,L,L,T10,T10,T10,T9,T9,L,L,T9,T10,T10,T10,T10,L,L,T9,T9,T9,T9"],
+          ["Irwan", "082284504774", "T10,T10,T10,T10,T10,L,L,T9,T9,T9,T9,T9,L,L,T10,T10,T9,T9,T9,L,L,T10,T10,T10,T10,T10,L,L,T9,T9"],
+          ["Reszeky", "0895325937598", "T9,T9,L,L,T9,T10,T10,T10,T10,L,L,T10,T9,T9,T9,T9,L,L,T10,T10,T10,T9,T9,L,L,T9,T10,T10,T10,T10"],
+          ["Jojon Herdika", "085265581217", "T11,T11,T11,T11,L,L,T11,T11,T11,T11,C,L,L,T11,T11,T11,T11,T11,L,L,T11,T11,T11,T11,T11,L,L,T11,T11,T11"],
+          ["Al Japrizandra", "082288259484", "L,T11,T11,C,T11,T11,L,L,T11,T11,T11,T11,T11,L,L,T11,T11,T11,T11,T11,L,L,T11,T11,C,T11,T11,L,L,T11"],
+          ["Ahmad Dafis", "081363570188", "T11,L,L,T11,T11,T11,T11,T11,L,L,T11,T11,T11,T11,T11,L,L,C,T11,T11,T11,T11,L,L,T11,T11,T11,T11,T11,L"],
+          ["Hendra", "085264891651", "T12,T12,T12,L,L,T12,T12,T12,T12,T12,L,L,T12,T12,T12,T12,T12,L,L,T12,T12,T12,T12,T12,L,L,T12,T12,T12,T12"],
+          ["Loza Murdani", "085281303225", "L,L,T12,T12,T12,T12,T12,L,L,T12,T12,T12,T12,C,L,L,T12,T12,T12,T12,T12,L,L,T12,T12,T12,T12,T12,L,L"],
+          ["Muhammad Ardiansyah", "0895370762676", "L,L,T13,T13,T13,T13,T13,L,L,T13,T13,T13,T13,T13,L,L,T13,T13,T13,T13,T13,L,L,T13,T13,T13,T13,T13,L,L"],
+          ["Muafa Arya Pratama T", "085376145237", "T13,T13,L,L,T13,T13,C,T13,T13,L,L,T13,T13,T13,T13,T13,L,L,T13,T13,T13,T13,T13,L,L,T13,T13,C,T13,T13"],
+          ["Rama Dani", "083173710770", "T13,T13,T13,T13,L,L,T13,T13,T13,T13,T13,L,L,T13,T13,T13,T13,T13,L,L,C,T13,T13,T13,T13,L,L,T13,T13,T13"]
+        ]
+      }
+    };
+
+    // Personel WT yang bertugas di tim tertentu pada tanggal tertentu, beserta cadangan hari itu
+    function getWtRoster(wtId, date) {
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const sched = WT_SCHEDULES[key];
+      if (!sched) return { scheduled: false, onDuty: WT_TEAMS[wtId].members, reserves: [] };
+      const idx = date.getDate() - 1;
+      const code = 'T' + wtId;
+      const onDuty = [], reserves = [];
+      sched.people.forEach(([name, phone, cells]) => {
+        const c = cells.split(',')[idx];
+        if (c === code) onDuty.push({ name, phone });
+        else if (c === 'C') reserves.push({ name, phone });
+      });
+      return { scheduled: true, onDuty, reserves };
+    }
+
     // 4. MAPPING RESMI 14 SEGMENT JALUR PIPA SESUAI DOKUMEN KONTRAK
     const SEGMENTS = [
       { id: "1", code: "Seg 1", name: "Ujung Seg 1 – Minas TF", keywords: "minas tank farm ujung", patrols: [1], wts: [1], defaultEst: 30 },
@@ -1167,32 +1228,52 @@
         : `${ctx.dateStr} ${ctx.timeStr} WIB`;
       const alertText = `*ALARM LDS - GROUND CHECK*\n${ticket}${subjLine}\nLokasi: ${seg.code} (${seg.name})${kpLine}\nLaporan SPO: ${repTime}\nMohon segera dilakukan penyisiran radius ±500m dan laporkan estimasi waktu tiba (ETA).`;
 
-      // 1. Render Walkthrough Teams (08:00 - 16:00 WIB)
+      // 1. Render Walkthrough Teams (08:00 - 16:00 WIB) — personel sesuai jadwal WT harian
+      const dayLabel = ctx.now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+      const personRow = (m, tag) => `
+            <div class="person-item">
+              <div class="person-info"><strong>${esc(m.name)}${tag ? ` <span style="font-size:10.5px;color:#B45309;">(${tag})</span>` : ''}</strong><span>${m.phone ? esc(m.phone) : 'Nomor HP belum diisi'}</span></div>
+              ${m.phone
+                ? `<a class="wa-direct" href="${formatWaLink(m.phone, alertText)}" target="_blank">📲 WA</a>`
+                : `<button class="wa-empty" onclick="switchTab('tab-roster', document.querySelectorAll('.nav-tab')[1])">+ Isi HP</button>`}
+            </div>`;
       activeWtIds.forEach(wtId => {
         const wt = WT_TEAMS[wtId];
-        const opt = document.createElement('option');
-        opt.value = JSON.stringify({ title: wt.name, members: wt.members.map(m => m.name) });
-        opt.textContent = `${wt.name} (Walkthrough) — ${wt.members.map(m => m.name).join(', ')}`;
-        if (ctx.isWtActive) replySelect.prepend(opt);
-        else replySelect.appendChild(opt);
+        const roster = getWtRoster(wtId, ctx.now);
+        const crew = roster.onDuty;
+
+        if (crew.length) {
+          const opt = document.createElement('option');
+          opt.value = JSON.stringify({ title: wt.name, members: crew.map(m => m.name) });
+          opt.textContent = `${wt.name} (Walkthrough) — ${crew.map(m => m.name).join(', ')}`;
+          if (ctx.isWtActive) replySelect.prepend(opt);
+          else replySelect.appendChild(opt);
+        }
+
+        let schedInfo;
+        if (!roster.scheduled) {
+          schedInfo = `<div class="kp-box warn" style="margin:0 0 6px;padding:6px 10px;font-size:11.5px;">⚠️ Jadwal WT bulan ini belum diperbarui — menampilkan anggota tetap tim.</div>`;
+        } else if (!crew.length) {
+          schedInfo = `<div class="kp-box err" style="margin:0 0 6px;padding:6px 10px;font-size:11.5px;">⛔ Tidak ada personel ${esc(wt.name.split(' (')[0])} terjadwal pada ${dayLabel}.</div>`;
+        } else if (crew.length === 1) {
+          schedInfo = `<div class="kp-box warn" style="margin:0 0 6px;padding:6px 10px;font-size:11.5px;">⚠️ Hanya 1 personel terjadwal pada ${dayLabel}.</div>`;
+        } else {
+          schedInfo = `<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">🗓️ Jadwal ${dayLabel}: ${crew.length} personel bertugas</div>`;
+        }
+        const showReserves = roster.scheduled && crew.length < 2 && roster.reserves.length;
 
         const card = document.createElement('div');
-        card.className = 'unit-card' + (ctx.isWtActive ? ' selected-unit' : '');
+        card.className = 'unit-card' + (ctx.isWtActive && crew.length ? ' selected-unit' : '');
         card.innerHTML = `
           <span class="unit-badge ${ctx.isWtActive ? 'badge-wt' : 'badge-off'}">
             ${ctx.isWtActive ? '🚶 Walkthrough ON-DUTY (08:00–16:00)' : '🚶 Walkthrough (Off-Hours)'}
           </span>
-          <div style="font-weight:800;font-size:14px;color:var(--navy);">${wt.name}</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-bottom:4px;">${wt.area}</div>
-          <div style="font-size:11px;color:var(--ptg-blue);font-weight:700;margin-bottom:6px;">📍 ${wt.mustering} • 🚙 ${wt.vehicle}</div>
-          ${wt.members.map(m => `
-            <div class="person-item">
-              <div class="person-info"><strong>${m.name}</strong><span>${m.phone || 'Nomor HP belum diisi'}</span></div>
-              ${m.phone
-                ? `<a class="wa-direct" href="${formatWaLink(m.phone, alertText)}" target="_blank">📲 WA</a>`
-                : `<button class="wa-empty" onclick="switchTab('tab-roster', document.querySelectorAll('.nav-tab')[1])">+ Isi HP</button>`}
-            </div>
-          `).join('')}
+          <div style="font-weight:800;font-size:14px;color:var(--navy);">${esc(wt.name)}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:4px;">${esc(wt.area)}</div>
+          <div style="font-size:11px;color:var(--ptg-blue);font-weight:700;margin-bottom:6px;">📍 ${esc(wt.mustering)} • 🚙 ${esc(wt.vehicle)}</div>
+          ${schedInfo}
+          ${crew.map(m => personRow(m, '')).join('')}
+          ${showReserves ? `<div style="font-size:11px;font-weight:700;color:#B45309;margin:8px 0 2px;">Cadangan hari ini:</div>${roster.reserves.map(m => personRow(m, 'Cadangan')).join('')}` : ''}
         `;
         container.appendChild(card);
       });
