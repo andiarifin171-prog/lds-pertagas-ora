@@ -1,0 +1,48 @@
+{
+  "name": "lds-quick-response-dispatch",
+  "productName": "LDS Quick-Response & Security Dispatch",
+  "version": "1.0.0",
+  "description": "Aplikasi PC LDS Quick-Response & Security Dispatch - Operation Rokan Area",
+  "main": "main.js",
+  "author": "Andi Arifin Siregar",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node test-links.js",
+    "dist:win": "electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "id.andiarifin.ldsdispatch",
+    "productName": "LDS Quick-Response & Security Dispatch",
+    "executableName": "LDS-Quick-Response",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "links.js",
+      "offline.html",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.png",
+      "artifactName": "LDS-Quick-Response-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LDS Quick-Response & Security Dispatch",
+      "uninstallDisplayName": "LDS Quick-Response & Security Dispatch",
+      "runAfterFinish": true
+    }
+  }
+}
